@@ -1,0 +1,114 @@
+{
+  "compilerOptions": {
+    /* Language and Environment */
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable", "WebWorker"],
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+
+    /* Modules */
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": false,
+    "resolvePackageJsonExports": true,
+    "resolvePackageJsonImports": true,
+    "allowArbitraryExtensions": false,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "allowUmdGlobalAccess": false,
+
+    /* Emit */
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "removeComments": false,
+    "importHelpers": true,
+    "downlevelIteration": false,
+    "newLine": "lf",
+    "noEmit": false,
+    "emitDeclarationOnly": false,
+
+    /* Interop Constraints */
+    "isolatedModules": true,
+    "verbatimModuleSyntax": false,
+    "allowJs": true,
+    "checkJs": false,
+
+    /* Type Checking */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noPropertyAccessFromIndexSignature": false,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "alwaysStrict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "exactOptionalPropertyTypes": false,
+    "noImplicitThis": true,
+    "useUnknownInCatchVariables": true,
+
+    /* Completeness */
+    "skipDefaultLibCheck": true,
+    "skipLibCheck": true,
+
+    /* Advanced Options */
+    "forceConsistentCasingInFileNames": true,
+    "incremental": true,
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+
+    /* Path Aliases */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src-js/*"],
+      "@zig-wasm/pixel-to-ascii": ["./src-js/index"]
+    }
+  },
+  "include": [
+    "src-js/**/*",
+    "src-js/**/*.ts",
+    "src-js/**/*.tsx",
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "zig-cache",
+    "zig-out",
+    "demo",
+    "build",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx"
+  ],
+  "references": [
+    {
+      "path": "./tsconfig.src.json"
+    },
+    {
+      "path": "./tsconfig.react.json"
+    }
+  ],
+  "watchOptions": {
+    "watchFile": "useFsEvents",
+    "watchDirectory": "useFsEvents",
+    "fallbackPolling": "dynamicPriority",
+    "synchronousWatchDirectory": false,
+    "excludeDirectories": [
+      "node_modules",
+      "dist",
+      "zig-cache",
+      "zig-out"
+    ]
+  }
+}
