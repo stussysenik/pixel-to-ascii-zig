@@ -1,0 +1,85 @@
+Repository: pixel-to-ascii-zig
+Generated: 2026-03-03
+
+Source: demo/index.html
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pixel to ASCII - Zig/WebGPU Demo</title>
+  <meta name="description" content="High-performance video to ASCII converter using Zig WebAssembly and WebGPU">
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS (via CDN for demo) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', '</script>sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            neon: {
+              green: '#00ff9d',
+              blue: '#00d4ff',
+              purple: '#b24bff',
+              pink: '#ff6b9d',
+            },
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background:</style> linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%);
+      min-height: 100vh;
+    }
+    .glow-text {
+      text-shadow: 0 0 20px rgba(0, 255, 157, 0.5);
+    }
+    .glow-border {
+      box-shadow: 0 0 20px rgba(0, 255, 157, 0.3),
+                  inset 0 0 20px rgba(0, 255, 157, 0.1);
+    }
+    .ascii-container {
+      position: relative;
+      background: #000;
+      border: 2px solid #00ff9d;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .ascii-container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(
+        45deg,
+        transparent 40%,
+        rgba(0, 255, 157, 0.05) 50%,
+        transparent 60%
+      );
+      background-size: 200% 200%;
+      animation: shimmer 3s infinite;
+      pointer-events: none;
+      z-index: 1;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 200%; }
+      100% { background-position: -200% -200%; }
+    }
+    .control-panel {
+      background: rgba(10, 10, 15, 0.9);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(0, 255, 157, 0.3);
+      border-radius: 8px;
+    }
