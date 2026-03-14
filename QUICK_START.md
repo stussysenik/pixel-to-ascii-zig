@@ -1,6 +1,6 @@
 # Quick Start Guide
 
-Get up and running with Pixel to ASCII (Zig/WebGPU) in 5 minutes.
+Get up and running with Pixel to ASCII in 5 minutes.
 
 ## Prerequisites
 
@@ -39,8 +39,30 @@ npm install
 # Build the WASM module
 npm run build
 
-# The WASM file will be in dist/pixel-to-ascii-wasm.wasm
+# The WASM file will be in zig-out/pixel-to-ascii-wasm.wasm
 ```
+
+### Web Console
+
+```bash
+zig build wasm -Doptimize=ReleaseFast
+python3 -m http.server 8000
+```
+
+Open `http://127.0.0.1:8000/web/index.html`, then drag in an image or video asset.
+
+### SwiftUI Console
+
+```bash
+zig build macos -Doptimize=ReleaseFast
+cd swift/PixelToAsciiConsole
+xcodebuild -project PixelToAsciiConsole.xcodeproj -scheme PixelToAsciiConsole -configuration Debug build
+```
+
+The generated app target and scheme are also ready for FlowDeck:
+
+- Project: `swift/PixelToAsciiConsole/PixelToAsciiConsole.xcodeproj`
+- Scheme: `PixelToAsciiConsole`
 
 ## Basic Usage
 

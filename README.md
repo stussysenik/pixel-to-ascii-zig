@@ -19,14 +19,24 @@
 
 ## What is this?
 
-`pixel-to-ascii` converts video frames into ASCII art in real time. The core renderer is written in Zig, compiled to WebAssembly for the browser and to static libraries for native platforms (macOS, iOS). Drop a video file into the web app and watch it rendered as colored ASCII characters at 60+ FPS.
+`pixel-to-ascii` converts visual assets into ASCII art in real time. The core renderer is written in Zig, compiled to WebAssembly for the browser and to static libraries for native platforms (macOS, iOS). Drop an image or video file into the web app and watch it rendered as colored ASCII characters at 60+ FPS.
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/assets/web-app-landing.png" alt="ASCII Visual Console — landing" width="800">
+</p>
+
+<p align="center">
+  <img src="docs/assets/web-app-render.png" alt="ASCII Visual Console — live render" width="800">
+</p>
 
 ## Features
 
 - **60+ FPS** real-time conversion via Zig's zero-cost abstractions
 - **8 character sets** from minimal (`. o O @`) to detailed (70 chars)
 - **Interactive effects** — mouse glow, click ripples, audio reactivity
-- **Drag & drop** any video file, no server required
+- **Drag & drop** still or motion assets into the console
 - **Cross-platform** — Web (WASM), macOS (SwiftUI), iOS (SwiftUI), npm package
 - **Perceptual brightness** using BT.601 luminance (0.299R + 0.587G + 0.114B)
 - **Motion design system** — spring animations, reduced-motion support
@@ -39,11 +49,11 @@
 # Build the WASM module
 zig build wasm -Doptimize=ReleaseFast
 
-# Open the web app
-open web/index.html
+# Serve the repo root so the browser can fetch the WASM file
+python3 -m http.server 8000
 ```
 
-Drag a video file onto the drop zone. That's it.
+Open `http://127.0.0.1:8000/web/index.html` and drag an image or video asset onto the stage.
 
 ### npm
 
@@ -82,6 +92,22 @@ Build the xcframework:
 ```bash
 ./scripts/build-xcframework.sh
 ```
+
+Run the macOS console app:
+
+```bash
+cd swift/PixelToAsciiConsole
+xcodebuild -project PixelToAsciiConsole.xcodeproj -scheme PixelToAsciiConsole -configuration Debug build
+open ~/Library/Developer/Xcode/DerivedData/PixelToAsciiConsole-*/Build/Products/Debug/PixelToAsciiConsole.app
+```
+
+FlowDeck-ready project:
+
+`swift/PixelToAsciiConsole/PixelToAsciiConsole.xcodeproj`
+
+Scheme:
+
+`PixelToAsciiConsole`
 
 ### Build from source
 
