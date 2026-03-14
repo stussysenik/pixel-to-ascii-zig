@@ -1,0 +1,189 @@
+/* Motion Design System
+ * Three-designer weighting: Jakub 60% / Emil 25% / Jhey 15%
+ *
+ * Jakub Antalík — spring-driven micro-interactions, blur transitions
+ * Emil Kowalski  — instant feedback, no unnecessary animation on data
+ * Jhey Tompkins  — playful CSS-only effects, bouncy overshoots
+ */
+
+/* ── Motion tokens ─────────────────────────────────────────────── */
+:root {
+  /* Duration scale */
+  --motion-instant: 0ms;         /* Emil: stats, data, counters */
+  --motion-control: 150ms;       /* Emil: sliders, toggles, inputs */
+  --motion-modal: 350ms;         /* Jakub: panels, overlays, drop zone */
+  --motion-effect: 500ms;        /* Jhey: glow pulses, decorative */
+  --motion-ripple: 1.5s;         /* Jhey: click ripple expansion */
+
+  /* Easing curves */
+  --ease-control: cubic-bezier(0.25, 0.1, 0.25, 1);          /* Emil: precise, no overshoot */
+  --spring-snappy: cubic-bezier(0.22, 1, 0.36, 1);           /* Jakub: fast attack, soft settle */
+  --spring-bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);        /* Jhey: playful overshoot */
+
+  /* Blur scale for Jakub transitions */
+  --blur-enter: blur(4px);
+  --blur-none: blur(0px);
+}
+
+/* ── Reduced motion ────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-control: 0ms;
+    --motion-modal: 0ms;
+    --motion-effect: 0ms;
+    --motion-ripple: 0ms;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Drop zone hover (Jakub — 350ms spring) ────────────────────── */
+.drop-zone {
+  transition:
+    border-color var(--motion-modal) var(--spring-snappy),
+    box-shadow var(--motion-modal) var(--spring-snappy),
+    transform var(--motion-modal) var(--spring-snappy),
+    filter var(--motion-modal) var(--spring-snappy);
+}
+
+.drop-zone.drag-over {
+  border-color: var(--accent);
+  box-shadow: 0 0 30px rgba(0, 255, 136, 0.25), inset 0 0 30px rgba(0, 255, 136, 0.05);
+  transform: scale(1.01);
+  filter: var(--blur-none);
+}
+
+/* ── Panel enter/exit (Jakub — spring + blur fade) ─────────────── */
+.panel {
+  transition:
+    opacity var(--motion-modal) var(--spring-snappy),
+    transform var(--motion-modal) var(--spring-snappy),
+    filter var(--motion-modal) var(--spring-snappy);
+}
+
+.panel.entering {
+  opacity: 0;
+  transform: translateX(20px);
+  filter: var(--blur-enter);
+}
+
+.panel.visible {
+  opacity: 1;
+  transform: translateX(0);
+  filter: var(--blur-none);
+}
+
+.panel.exiting {
+  opacity: 0;
+  transform: translateX(20px);
+  filter: var(--blur-enter);
+}
+
+/* ── Slider & toggle feedback (Emil — 150ms, precise) ──────────── */
+.slider::-webkit-slider-thumb {
+  transition:
+    box-shadow var(--motion-control) var(--ease-control),
+    transform var(--motion-control) var(--ease-control);
+}
+
+.slider:active::-webkit-slider-thumb {
+  transform: scale(1.2);
+  box-shadow: 0 0 0 4px rgba(0, 255, 136, 0.2);
+}
+
+.toggle {
+  transition:
+    background-color var(--motion-control) var(--ease-control),
+    box-shadow var(--motion-control) var(--ease-control);
+}
+
+.toggle-knob {
+  transition: transform var(--motion-control) var(--ease-control);
+}
+
+.toggle.active .toggle-knob {
+  transform: translateX(20px);
+}
+
+/* ── Stats display (Emil — instant, no animation) ──────────────── */
+.stat-value {
+  transition: none;
+}
+
+/* ── ASCII glow pulse (Jhey — 500ms bouncy) ────────────────────── */
+@keyframes glow-pulse {
+  0%, 100% {
+    text-shadow: 0 0 4px currentColor;
+  }
+  50% {
+    text-shadow: 0 0 12px currentColor, 0 0 24px currentColor;
+  }
+}
+
+.ascii-glow {
+  animation: glow-pulse var(--motion-effect) var(--spring-bouncy) infinite;
+}
+
+/* ── Drop ripple animation (Jhey — 1.5s bouncy) ───────────────── */
+@keyframes drop-ripple {
+  0% {
+    transform: scale(0);
+    opacity: 0.6;
+  }
+  60% {
+    transform: scale(1.2);
+    opacity: 0.2;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.drop-ripple {
+  animation: drop-ripple var(--motion-ripple) var(--spring-bouncy) forwards;
+  pointer-events: none;
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+}
+
+/* ── Button press (Emil) ───────────────────────────────────────── */
+.btn {
+  transition:
+    background-color var(--motion-control) var(--ease-control),
+    transform var(--motion-control) var(--ease-control),
+    box-shadow var(--motion-control) var(--ease-control);
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+/* ── Fade in utility ───────────────────────────────────────────── */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: var(--blur-enter);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: var(--blur-none);
+  }
+}
+
+.fade-in {
+  animation: fade-in var(--motion-modal) var(--spring-snappy) both;
+}
+
+.fade-in-delay-1 { animation-delay: 50ms; }
+.fade-in-delay-2 { animation-delay: 100ms; }
+.fade-in-delay-3 { animation-delay: 150ms; }

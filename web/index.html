@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>pixel-to-ascii — Real-time Video to ASCII Art</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/motion.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <header class="header">
+      <span class="header-title">pixel-to-ascii</span>
+      <div class="header-links">
+        <a href="https://github.com/nickcostanzo-work/pixel-to-ascii-zig" target="_blank">GitHub</a>
+        <a href="https://www.npmjs.com/package/@zig-wasm/pixel-to-ascii" target="_blank">npm</a>
+      </div>
+    </header>
+
+    <!-- Landing: Drop zone -->
+    <div class="main" id="drop-zone-container">
+      <div class="drop-zone-container">
+        <div class="drop-zone" id="drop-zone">
+          <div class="drop-zone-icon">&#x25B6;&#xFE0E;</div>
+          <div class="drop-zone-text">Drop a video file here</div>
+          <div class="drop-zone-hint">or click to browse &middot; accepts any video format</div>
+          <input type="file" accept="video/*">
+        </div>
+      </div>
+    </div>
+
+    <!-- Player: ASCII canvas + controls -->
+    <div class="main hidden" id="player-container">
+      <!-- Canvas area -->
+      <div class="canvas-container" id="canvas-container">
+        <canvas id="ascii-canvas" class="ascii-canvas"></canvas>
+
+        <!-- Stats overlay -->
+        <div class="stats-overlay">
+          <span id="stat-fps">-- FPS</span>
+          <span id="stat-frametime">--ms</span>
+          <span id="stat-grid">--x--</span>
+        </div>
+      </div>
+
+      <!-- Control panel -->
+      <div class="control-panel panel entering">
+        <!-- Playback -->
+        <div class="control-section">
+          <h3>Playback</h3>
+          <button class="btn btn-primary" id="play-btn" style="width:100%">Pause</button>
+        </div>
+
+        <!-- Grid -->
+        <div class="control-section">
+          <h3>Grid</h3>
+          <div class="control-row">
+            <label>Columns</label>
+            <span class="value" id="cols-value">80</span>
+          </div>
+          <input type="range" class="slider" id="cols-slider" min="20" max="200" value="80">
+        </div>
+
+        <!-- Rendering -->
+        <div class="control-section">
+          <h3>Rendering</h3>
+
+          <div class="control-row">
+            <label>Colored</label>
+            <div class="toggle active" id="colored-toggle"><div class="toggle-knob"></div></div>
+          </div>
+
+          <div class="control-row">
+            <label>Brightness</label>
+            <span class="value" id="brightness-value">1.0</span>
+          </div>
+          <input type="range" class="slider" id="brightness-slider" min="0.2" max="3.0" step="0.1" value="1.0">
+
+          <div class="control-row">
+            <label>Blend</label>
+            <span class="value" id="blend-value">0</span>
+          </div>
+          <input type="range" class="slider" id="blend-slider" min="0" max="100" value="0">
+
+          <div class="control-row">
+            <label>Highlight</label>
+            <span class="value" id="highlight-value">0</span>
+          </div>
+          <input type="range" class="slider" id="highlight-slider" min="0" max="100" value="0">
+        </div>
+
+        <!-- Character set -->
+        <div class="control-section">
+          <h3>Character Set</h3>
+          <select class="select" id="charset-select">
+            <option value="standard">Standard (.:-=+*#%@)</option>
+            <option value="blocks">Blocks</option>
+            <option value="minimal">Minimal (.oO@)</option>
+            <option value="binary">Binary</option>
+            <option value="detailed">Detailed (70 chars)</option>
+            <option value="dots">Dots</option>
+            <option value="arrows">Arrows</option>
+          </select>
+        </div>
+
+        <!-- Effects -->
+        <div class="control-section">
+          <h3>Effects</h3>
+          <div class="control-row">
+            <label>Mouse Glow</label>
+            <div class="toggle active" id="mouse-toggle"><div class="toggle-knob"></div></div>
+          </div>
+          <div class="control-row">
+            <label>Click Ripple</label>
+            <div class="toggle active" id="ripple-toggle"><div class="toggle-knob"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

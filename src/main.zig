@@ -10,7 +10,7 @@ const allocator = gpa.allocator();
 var ascii_renderer: ?renderer.AsciiRenderer = null;
 
 // Export initialization function
-export fn init(width: u32, height: u32, num_columns: u32, font_size: f32) bool {
+export fn init(width: u32, height: u32, num_columns: u32, font_size: f32) callconv(.C) bool {
     const config = renderer.Config{
         .width = width,
         .height = height,
@@ -22,8 +22,7 @@ export fn init(width: u32, height: u32, num_columns: u32, font_size: f32) bool {
         .brightness = 1.0,
     };
 
-    ascii_renderer = renderer.init(allocator, config) catch {
-        std.debug.print("Failed to initialize renderer\n", .{});
+    ascii_renderer = renderer.AsciiRenderer.init(allocator, config) catch {
         return false;
     };
 
@@ -35,14 +34,13 @@ export fn updateVideoFrame(
     data: [*]const u8,
     width: u32,
     height: u32,
-    stride: u32
-) bool {
+    stride: u32,
+) callconv(.C) bool {
     if (ascii_renderer == null) return false;
 
-    const slice = data[0 .. width * height * 4]; // Assuming RGBA format
+    const slice = data[0 .. width * height * 4]; // RGBA format
 
     ascii_renderer.?.updateVideoFrame(slice, width, height, stride) catch {
-        std.debug.print("Failed to update video frame\n", .{});
         return false;
     };
 
@@ -50,85 +48,131 @@ export fn updateVideoFrame(
 }
 
 // Export function to update mouse position (normalized 0-1)
-export fn updateMouse(x: f32, y: f32) void {
-    if (ascii_renderer) |*renderer| {
-        renderer.updateMouse(x, y);
+export fn updateMouse(x: f32, y: f32) callconv(.C) void {
+    if (ascii_renderer) |*r| {
+        r.updateMouse(x, y);
     }
 }
 
 // Export function to update audio level (0-1)
-export fn updateAudio(level: f32, reactivity: f32, sensitivity: f32) void {
-    if (ascii_renderer) |*renderer| {
-        renderer.updateAudio(level, reactivity, sensitivity);
+export fn updateAudio(level: f32, reactivity: f32, sensitivity: f32) callconv(.C) void {
+    if (ascii_renderer) |*r| {
+        r.updateAudio(level, reactivity, sensitivity);
     }
 }
 
 // Export function to add ripple at position
-export fn addRipple(x: f32, y: f32) void {
-    if (ascii_renderer) |*renderer| {
-        renderer.addRipple(x, y);
+export fn addRipple(x: f32, y: f32) callconv(.C) void {
+    if (ascii_renderer) |*r| {
+        r.addRipple(x, y);
     }
 }
 
 // Export function to set rendering options
-export fn setOptions(colored: bool, blend: f32, highlight: f32, brightness: f32) void {
-    if (ascii_renderer) |*renderer| {
-        renderer.setOptions(colored, blend, highlight, brightness);
+export fn setOptions(colored: bool, blend: f32, highlight: f32, brightness: f32) callconv(.C) void {
+    if (ascii_renderer) |*r| {
+        r.setOptions(colored, blend, highlight, brightness);
     }
 }
 
 // Export function to render frame and get output buffer
-export fn render() [*]const u8 {
-    if (ascii_renderer) |*renderer| {
-        const buffer = renderer.render() catch return null;
+export fn render() callconv(.C) [*]const u8 {
+    if (ascii_renderer) |*r| {
+        const buffer = r.render() catch return @as([*]const u8, @ptrFromInt(0));
         return buffer.ptr;
     }
-    return null;
+    return @as([*]const u8, @ptrFromInt(0));
 }
 
 // Export function to get output buffer size
-export fn getOutputBufferSize() usize {
-    if (ascii_renderer) |*renderer| {
-        return renderer.getOutputBufferSize();
+export fn getOutputBufferSize() callconv(.C) usize {
+    if (ascii_renderer) |*r| {
+        return r.getOutputBufferSize();
     }
     return 0;
 }
 
-// Export function to get grid dimensions
-export fn getGridDimensions() struct { cols: u32, rows: u32 } {
-    if (ascii_renderer) |*renderer| {
-        return renderer.getGridDimensions();
+// Export function to get grid columns
+export fn getGridCols() callconv(.C) u32 {
+    if (ascii_renderer) |*r| {
+        return r.getGridCols();
     }
-    return .{ .cols = 0, .rows = 0 };
+    return 0;
+}
+
+// Export function to get grid rows
+export fn getGridRows() callconv(.C) u32 {
+    if (ascii_renderer) |*r| {
+        return r.getGridRows();
+    }
+    return 0;
 }
 
 // Export function to get performance stats
-export fn getStats() struct { fps: f32, frame_time_ms: f32 } {
-    if (ascii_renderer) |*renderer| {
-        return renderer.getStats();
+export fn getStats() callconv(.C) u64 {
+    if (ascii_renderer) |*r| {
+        const stats = r.getStats();
+        // Pack fps and frame_time into u64 (two f32s)
+        const fps_bits: u32 = @bitCast(stats.fps);
+        const ft_bits: u32 = @bitCast(stats.frame_time_ms);
+        return @as(u64, fps_bits) | (@as(u64, ft_bits) << 32);
     }
-    return .{ .fps = 0.0, .frame_time_ms = 0.0 };
+    return 0;
 }
 
 // Export cleanup function
-export fn cleanup() void {
-    if (ascii_renderer) |*renderer| {
-        renderer.deinit();
+export fn cleanup() callconv(.C) void {
+    if (ascii_renderer) |*r| {
+        r.deinit();
     }
     ascii_renderer = null;
 
     // Check for memory leaks
-    const leaked = gpa.deinit();
-    if (leaked == .leak) {
-        std.debug.print("Memory leaks detected!\n", .{});
+    const check = gpa.deinit();
+    if (check == .leak) {
+        @panic("Memory leaks detected!");
     }
 }
 
-// Panic handler for WASM
-pub fn panic(message: []const u8, stack_trace: ?*std.builtin.StackTrace) noreturn {
-    std.debug.print("PANIC: {s}\n", .{message});
-    if (stack_trace) |trace| {
-        std.debug.dumpStackTrace(trace.*);
-    }
+// C ABI prefixed wrappers for Swift/native consumers
+export fn pta_init(width: u32, height: u32, num_columns: u32, font_size: f32) callconv(.C) bool {
+    return init(width, height, num_columns, font_size);
+}
+
+export fn pta_update_video_frame(data: [*]const u8, width: u32, height: u32, stride: u32) callconv(.C) bool {
+    return updateVideoFrame(data, width, height, stride);
+}
+
+export fn pta_render() callconv(.C) [*]const u8 {
+    return render();
+}
+
+export fn pta_get_grid_cols() callconv(.C) u32 {
+    return getGridCols();
+}
+
+export fn pta_get_grid_rows() callconv(.C) u32 {
+    return getGridRows();
+}
+
+export fn pta_set_options(colored: bool, blend: f32, highlight: f32, brightness: f32) callconv(.C) void {
+    return setOptions(colored, blend, highlight, brightness);
+}
+
+export fn pta_update_mouse(x: f32, y: f32) callconv(.C) void {
+    return updateMouse(x, y);
+}
+
+export fn pta_add_ripple(x: f32, y: f32) callconv(.C) void {
+    return addRipple(x, y);
+}
+
+export fn pta_cleanup() callconv(.C) void {
+    return cleanup();
+}
+
+// Panic handler for WASM — Zig 0.13+ signature
+pub fn panic(msg: []const u8, _: ?*std.builtin.StackTrace, _: usize) noreturn {
+    _ = msg;
     @trap();
 }

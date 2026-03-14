@@ -28,20 +28,20 @@ pub const Charset = enum {
     pub fn getChars(self: Charset) []const u8 {
         return switch (self) {
             .standard => " .:-=+*#%@",
-            .blocks => " ░▒▓█",
+            .blocks => " \xc2\x91\xc2\x92\xc2\x93\xe2\x96\x88",
             .minimal => " .oO@",
-            .binary => " █",
+            .binary => " \xe2\x96\x88",
             .detailed => " .'`^\",:;Il!i><~+_-?][}{1)(|/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$",
-            .dots => " ·•●",
-            .arrows => " ←↙↓↘→↗↑↖",
-            .emoji => "  ░▒▓🌑🌒🌓🌔🌕",
+            .dots => " \xc2\xb7\xe2\x80\xa2\xe2\x97\x8f",
+            .arrows => " \xe2\x86\x90\xe2\x86\x99\xe2\x86\x93\xe2\x86\x98\xe2\x86\x92\xe2\x86\x97\xe2\x86\x91\xe2\x86\x96",
+            .emoji => "  \xc2\x91\xc2\x92\xc2\x93\xf0\x9f\x8c\x91\xf0\x9f\x8c\x92\xf0\x9f\x8c\x93\xf0\x9f\x8c\x94\xf0\x9f\x8c\x95",
         };
     }
 
     pub fn getCharArray(self: Charset, allocator: std.mem.Allocator) ![]const u8 {
         const chars = self.getChars();
         const result = try allocator.alloc(u8, chars.len);
-        std.mem.copy(u8, result, chars);
+        @memcpy(result, chars);
         return result;
     }
 };
@@ -59,7 +59,7 @@ pub const Stats = struct {
     fps: f32 = 0.0,
     frame_time_ms: f32 = 0.0,
     frame_count: u32 = 0,
-    last_fps_update: u64 = 0,
+    last_fps_update: i64 = 0,
 };
 
 // Mouse effect state
@@ -110,7 +110,7 @@ pub const AsciiRenderer = struct {
     video_height: u32 = 0,
     video_stride: u32 = 0,
 
-    // Output buffer
+    // Output buffer — per-cell format: [char_index, r, g, b] per grid cell
     output_buffer: []u8 = undefined,
 
     // Effects state
@@ -125,15 +125,18 @@ pub const AsciiRenderer = struct {
     charset: []const u8 = undefined,
 
     // Time tracking
-    start_time: u64 = 0,
+    start_time: i64 = 0,
 
     // Initialize the renderer
     pub fn init(allocator: std.mem.Allocator, config: Config) !AsciiRenderer {
         // Calculate grid dimensions
         const char_width = config.font_size * 0.6; // CHAR_WIDTH_RATIO
-        const aspect_ratio = @intToFloat(f32, config.width) / @intToFloat(f32, config.height);
+        const w_f: f32 = @floatFromInt(config.width);
+        const h_f: f32 = @floatFromInt(config.height);
+        const aspect_ratio = w_f / h_f;
         const cols = config.num_columns;
-        const rows = @as(u32, @floatToInt(u32, @round(@intToFloat(f32, cols) / aspect_ratio / 2.0)));
+        const cols_f: f32 = @floatFromInt(cols);
+        const rows: u32 = @intFromFloat(@round(cols_f / aspect_ratio / 2.0));
 
         const grid = GridDimensions{
             .cols = cols,
@@ -142,17 +145,15 @@ pub const AsciiRenderer = struct {
             .char_height = config.font_size,
         };
 
-        // Allocate output buffer (RGBA for canvas)
-        const output_width = @as(u32, @floatToInt(u32, @floor(@intToFloat(f32, cols) * char_width)));
-        const output_height = @as(u32, @floatToInt(u32, @floor(@intToFloat(f32, rows) * config.font_size)));
-        const output_buffer = try allocator.alloc(u8, output_width * output_height * 4);
+        // Allocate output buffer — per-cell: [char_index, r, g, b]
+        const output_buffer = try allocator.alloc(u8, cols * rows * 4);
 
         // Initialize character set
         const charset = try Charset.standard.getCharArray(allocator);
 
         // Initialize ripple pool
         var ripple_pool: RipplePool = .{};
-        for (ripple_pool.ripples) |*r| {
+        for (&ripple_pool.ripples) |*r| {
             r.active = false;
         }
 
@@ -198,8 +199,12 @@ pub const AsciiRenderer = struct {
                 self.mouse.trail.count += 1;
             } else {
                 // Shift trail
-                std.mem.copy(struct { x: f32, y: f32 }, self.mouse.trail.positions[0..self.config.max_trail_length-1], self.mouse.trail.positions[1..self.config.max_trail_length]);
-                self.mouse.trail.positions[self.config.max_trail_length - 1] = .{ .x = self.mouse.x, .y = self.mouse.y };
+                const len = self.config.max_trail_length;
+                var i: u32 = 0;
+                while (i < len - 1) : (i += 1) {
+                    self.mouse.trail.positions[i] = self.mouse.trail.positions[i + 1];
+                }
+                self.mouse.trail.positions[len - 1] = .{ .x = self.mouse.x, .y = self.mouse.y };
             }
         }
 
@@ -222,7 +227,7 @@ pub const AsciiRenderer = struct {
         const current_time = self.getCurrentTime();
 
         // Find inactive ripple slot
-        for (self.ripples.ripples) |*ripple| {
+        for (&self.ripples.ripples) |*ripple| {
             if (!ripple.active) {
                 ripple.* = .{
                     .x = x,
@@ -257,39 +262,101 @@ pub const AsciiRenderer = struct {
     // Get current time in seconds
     fn getCurrentTime(self: *AsciiRenderer) f32 {
         const now = std.time.milliTimestamp();
-        return @intToFloat(f32, now - self.start_time) / 1000.0;
+        const delta: f32 = @floatFromInt(now - self.start_time);
+        return delta / 1000.0;
     }
 
-    // Calculate brightness from RGB values
+    // Calculate brightness from RGB values using perceptual luminance
     fn calculateBrightness(r: u8, g: u8, b: u8) f32 {
-        const rf = @intToFloat(f32, r) / 255.0;
-        const gf = @intToFloat(f32, g) / 255.0;
-        const bf = @intToFloat(f32, b) / 255.0;
+        const rf: f32 = @as(f32, @floatFromInt(r)) / 255.0;
+        const gf: f32 = @as(f32, @floatFromInt(g)) / 255.0;
+        const bf: f32 = @as(f32, @floatFromInt(b)) / 255.0;
         return rf * 0.299 + gf * 0.587 + bf * 0.114;
     }
 
-    // Get character index from brightness
+    // Get character index from brightness with audio modulation
     fn getCharIndex(self: *AsciiRenderer, brightness: f32) usize {
-        // Apply brightness multiplier
+        // Apply audio reactivity modulation
         const audio_multiplier = std.math.lerp(
-            std.math.lerp(0.3, 0.0, self.audio.sensitivity),
-            std.math.lerp(1.0, 5.0, self.audio.sensitivity),
-            self.audio.level
+            std.math.lerp(@as(f32, 0.3), @as(f32, 0.0), self.audio.sensitivity),
+            std.math.lerp(@as(f32, 1.0), @as(f32, 5.0), self.audio.sensitivity),
+            self.audio.level,
         );
 
         const audio_modulated = brightness * audio_multiplier;
         const final_brightness = std.math.lerp(brightness, audio_modulated, self.audio.reactivity);
 
         // Apply brightness adjustment
-        const adjusted_brightness: f32 = if (self.config.brightness <= 1.0) {
-            final_brightness * self.config.brightness;
-        } else {
+        const adjusted_brightness: f32 = if (self.config.brightness <= 1.0)
+            final_brightness * self.config.brightness
+        else
             1.0 - (1.0 - final_brightness) / self.config.brightness;
-        };
 
         const clamped = std.math.clamp(adjusted_brightness, 0.0, 1.0);
-        const num_chars_f = @intToFloat(f32, self.charset.len);
-        return @floatToInt(usize, @floor(clamped * (num_chars_f - 0.001)));
+        const num_chars_f: f32 = @floatFromInt(self.charset.len);
+        const idx: usize = @intFromFloat(@floor(clamped * (num_chars_f - 0.001)));
+        return @min(idx, self.charset.len - 1);
+    }
+
+    // Calculate mouse glow effect intensity for a cell
+    fn getMouseGlow(self: *AsciiRenderer, col_f: f32, row_f: f32) f32 {
+        if (self.mouse.x < 0.0 or self.mouse.y < 0.0) return 0.0;
+
+        const cols_f: f32 = @floatFromInt(self.grid.cols);
+        const rows_f: f32 = @floatFromInt(self.grid.rows);
+
+        // Convert mouse normalized coords to grid coords
+        const mouse_col = self.mouse.x * cols_f;
+        const mouse_row = self.mouse.y * rows_f;
+
+        const dx = col_f - mouse_col;
+        const dy = row_f - mouse_row;
+        const dist = @sqrt(dx * dx + dy * dy);
+
+        // 5-cell radius glow with smooth falloff
+        const radius: f32 = 5.0;
+        if (dist > radius) return 0.0;
+
+        return (1.0 - dist / radius) * 0.4;
+    }
+
+    // Calculate ripple effect intensity for a cell
+    fn getRippleEffect(self: *AsciiRenderer, col_f: f32, row_f: f32) f32 {
+        const current_time = self.getCurrentTime();
+        const cols_f: f32 = @floatFromInt(self.grid.cols);
+        const rows_f: f32 = @floatFromInt(self.grid.rows);
+
+        var total: f32 = 0.0;
+        for (&self.ripples.ripples) |*ripple| {
+            if (!ripple.active) continue;
+
+            const age = current_time - ripple.start_time;
+            if (age > 3.0) {
+                ripple.active = false;
+                continue;
+            }
+
+            // Convert ripple coords to grid space
+            const rx = ripple.x * cols_f;
+            const ry = ripple.y * rows_f;
+            const dx = col_f - rx;
+            const dy = row_f - ry;
+            const dist = @sqrt(dx * dx + dy * dy);
+
+            // Expanding ring: radius grows with time
+            const ring_radius = age * 12.0;
+            const ring_width: f32 = 2.0;
+            const ring_dist = @abs(dist - ring_radius);
+
+            if (ring_dist < ring_width) {
+                // Fade with age and distance from ring center
+                const fade = (1.0 - age / 3.0);
+                const ring_intensity = (1.0 - ring_dist / ring_width);
+                total += fade * ring_intensity * 0.3;
+            }
+        }
+
+        return std.math.clamp(total, 0.0, 0.5);
     }
 
     // Get output buffer for rendering
@@ -307,30 +374,131 @@ pub const AsciiRenderer = struct {
         return .{ .cols = self.grid.cols, .rows = self.grid.rows };
     }
 
+    // Get grid columns count
+    pub fn getGridCols(self: *AsciiRenderer) u32 {
+        return self.grid.cols;
+    }
+
+    // Get grid rows count
+    pub fn getGridRows(self: *AsciiRenderer) u32 {
+        return self.grid.rows;
+    }
+
     // Get performance stats
     pub fn getStats(self: *AsciiRenderer) struct { fps: f32, frame_time_ms: f32 } {
         return .{ .fps = self.stats.fps, .frame_time_ms = self.stats.frame_time_ms };
     }
 
-    // Render frame (placeholder - actual implementation would use WebGPU)
-    // For now, this implements CPU-based rendering as fallback
+    // Render frame — CPU-based ASCII conversion
+    // For each grid cell: sample video pixel, compute brightness, apply effects,
+    // write [char_index, r, g, b] to output buffer
     pub fn render(self: *AsciiRenderer) ![]const u8 {
-        const start_time = std.time.nanoTimestamp();
+        const start_ns = std.time.nanoTimestamp();
 
-        _ = self; // Suppress unused warning
+        const cols = self.grid.cols;
+        const rows = self.grid.rows;
 
-        // TODO: Implement actual WebGPU rendering
-        // For now, clear output buffer
-        @memset(self.output_buffer, 0);
+        // If no video frame, clear to spaces
+        if (self.video_frame == null) {
+            @memset(self.output_buffer, 0);
+            return self.output_buffer;
+        }
+
+        const frame = self.video_frame.?;
+        const vw = self.video_width;
+        const vh = self.video_height;
+        const stride = if (self.video_stride > 0) self.video_stride else vw * 4;
+
+        const cols_f: f32 = @floatFromInt(cols);
+        const rows_f: f32 = @floatFromInt(rows);
+        const vw_f: f32 = @floatFromInt(vw);
+        const vh_f: f32 = @floatFromInt(vh);
+
+        var row: u32 = 0;
+        while (row < rows) : (row += 1) {
+            var col: u32 = 0;
+            while (col < cols) : (col += 1) {
+                const col_f: f32 = @floatFromInt(col);
+                const row_f: f32 = @floatFromInt(row);
+
+                // Map grid cell center to video pixel coordinate
+                const sample_x: u32 = @intFromFloat(@floor((col_f + 0.5) / cols_f * vw_f));
+                const sample_y: u32 = @intFromFloat(@floor((row_f + 0.5) / rows_f * vh_f));
+                const sx = @min(sample_x, vw - 1);
+                const sy = @min(sample_y, vh - 1);
+
+                // Read RGBA from video frame
+                const pixel_offset = sy * stride + sx * 4;
+                if (pixel_offset + 3 >= frame.len) {
+                    // Out of bounds — write blank cell
+                    const out_idx = (row * cols + col) * 4;
+                    self.output_buffer[out_idx] = 0;
+                    self.output_buffer[out_idx + 1] = 0;
+                    self.output_buffer[out_idx + 2] = 0;
+                    self.output_buffer[out_idx + 3] = 0;
+                    continue;
+                }
+
+                const r = frame[pixel_offset];
+                const g = frame[pixel_offset + 1];
+                const b = frame[pixel_offset + 2];
+
+                // Calculate perceptual brightness
+                var brightness = calculateBrightness(r, g, b);
+
+                // Apply mouse glow effect
+                const glow = self.getMouseGlow(col_f, row_f);
+                brightness = std.math.clamp(brightness + glow, 0.0, 1.0);
+
+                // Apply ripple effect
+                const ripple = self.getRippleEffect(col_f, row_f);
+                brightness = std.math.clamp(brightness + ripple, 0.0, 1.0);
+
+                // Map brightness to character index (with audio modulation)
+                const char_idx = self.getCharIndex(brightness);
+
+                // Blend original color with brightness for colored mode
+                var out_r = r;
+                var out_g = g;
+                var out_b = b;
+
+                if (!self.config.colored) {
+                    // Monochrome: map brightness to grayscale
+                    const gray: u8 = @intFromFloat(std.math.clamp(brightness * 255.0, 0.0, 255.0));
+                    out_r = gray;
+                    out_g = gray;
+                    out_b = gray;
+                }
+
+                // Apply highlight effect — boost bright areas
+                if (self.config.highlight > 0.0) {
+                    const highlight_boost = brightness * self.config.highlight;
+                    const r_f: f32 = @floatFromInt(out_r);
+                    const g_f: f32 = @floatFromInt(out_g);
+                    const b_f: f32 = @floatFromInt(out_b);
+                    out_r = @intFromFloat(std.math.clamp(r_f + highlight_boost * 64.0, 0.0, 255.0));
+                    out_g = @intFromFloat(std.math.clamp(g_f + highlight_boost * 64.0, 0.0, 255.0));
+                    out_b = @intFromFloat(std.math.clamp(b_f + highlight_boost * 64.0, 0.0, 255.0));
+                }
+
+                // Write per-cell output: [char_index, r, g, b]
+                const out_idx = (row * cols + col) * 4;
+                self.output_buffer[out_idx] = @intCast(char_idx);
+                self.output_buffer[out_idx + 1] = out_r;
+                self.output_buffer[out_idx + 2] = out_g;
+                self.output_buffer[out_idx + 3] = out_b;
+            }
+        }
 
         // Track performance
-        const end_time = std.time.nanoTimestamp();
-        const frame_time_ms = @intToFloat(f32, end_time - start_time) / 1_000_000.0;
+        const end_ns = std.time.nanoTimestamp();
+        const frame_time_ns = end_ns - start_ns;
+        const frame_time_ms: f32 = @as(f32, @floatFromInt(frame_time_ns)) / 1_000_000.0;
 
         self.stats.frame_count += 1;
         const now = std.time.milliTimestamp();
         if (now - self.stats.last_fps_update >= 1000) {
-            self.stats.fps = @intToFloat(f32, self.stats.frame_count);
+            self.stats.fps = @floatFromInt(self.stats.frame_count);
             self.stats.frame_time_ms = frame_time_ms;
             self.stats.frame_count = 0;
             self.stats.last_fps_update = now;
