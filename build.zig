@@ -1,5 +1,17 @@
 const std = @import("std");
 
+fn createRootModule(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+) *std.Build.Module {
+    return b.createModule(.{
+        .root_source_file = b.path("src/main.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+}
+
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
@@ -7,9 +19,7 @@ pub fn build(b: *std.Build) void {
     // Create the executable
     const exe = b.addExecutable(.{
         .name = "pixel-to-ascii",
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = createRootModule(b, target, optimize),
     });
 
     // Install the executable
@@ -28,9 +38,7 @@ pub fn build(b: *std.Build) void {
 
     // Unit tests
     const unit_tests = b.addTest(.{
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = createRootModule(b, target, optimize),
     });
 
     const run_unit_tests = b.addRunArtifact(unit_tests);
@@ -45,9 +53,7 @@ pub fn build(b: *std.Build) void {
 
     const wasm_exe = b.addExecutable(.{
         .name = "pixel-to-ascii-wasm",
-        .root_source_file = b.path("src/main.zig"),
-        .target = wasm_target,
-        .optimize = optimize,
+        .root_module = createRootModule(b, wasm_target, optimize),
     });
 
     // Configure WASM for browser/JavaScript interop
@@ -57,7 +63,7 @@ pub fn build(b: *std.Build) void {
 
     // WASM-specific build steps
     const wasm_install = b.addInstallArtifact(wasm_exe, .{
-        .dest_dir = .{ .custom = "" },
+        .dest_dir = .{ .override = .{ .custom = "" } },
     });
     b.getInstallStep().dependOn(&wasm_install.step);
 
@@ -72,11 +78,10 @@ pub fn build(b: *std.Build) void {
     }
 
     // Static library for native/SwiftUI targets
-    const lib = b.addStaticLibrary(.{
+    const lib = b.addLibrary(.{
+        .linkage = .static,
         .name = "pixel-to-ascii",
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = createRootModule(b, target, optimize),
     });
 
     const lib_install = b.addInstallArtifact(lib, .{});
@@ -89,15 +94,14 @@ pub fn build(b: *std.Build) void {
         .os_tag = .macos,
     });
 
-    const macos_lib = b.addStaticLibrary(.{
+    const macos_lib = b.addLibrary(.{
+        .linkage = .static,
         .name = "pixel-to-ascii",
-        .root_source_file = b.path("src/main.zig"),
-        .target = macos_target,
-        .optimize = optimize,
+        .root_module = createRootModule(b, macos_target, optimize),
     });
 
     const macos_install = b.addInstallArtifact(macos_lib, .{
-        .dest_dir = .{ .custom = "macos" },
+        .dest_dir = .{ .override = .{ .custom = "macos" } },
     });
     const macos_step = b.step("macos", "Build macOS arm64 static library");
     macos_step.dependOn(&macos_install.step);
@@ -108,15 +112,14 @@ pub fn build(b: *std.Build) void {
         .os_tag = .ios,
     });
 
-    const ios_lib = b.addStaticLibrary(.{
+    const ios_lib = b.addLibrary(.{
+        .linkage = .static,
         .name = "pixel-to-ascii",
-        .root_source_file = b.path("src/main.zig"),
-        .target = ios_target,
-        .optimize = optimize,
+        .root_module = createRootModule(b, ios_target, optimize),
     });
 
     const ios_install = b.addInstallArtifact(ios_lib, .{
-        .dest_dir = .{ .custom = "ios" },
+        .dest_dir = .{ .override = .{ .custom = "ios" } },
     });
     const ios_step = b.step("ios", "Build iOS arm64 static library");
     ios_step.dependOn(&ios_install.step);

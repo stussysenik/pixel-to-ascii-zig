@@ -16,6 +16,7 @@ pnpm-lock.yaml
 dist/
 build/
 out/
+.build/
 *.wasm
 *.wasm.map
 *.xcframework/
