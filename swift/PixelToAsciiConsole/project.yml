@@ -1,0 +1,32 @@
+name: PixelToAsciiConsole
+options:
+  minimumXcodeGenVersion: 2.44.1
+  createIntermediateGroups: true
+settings:
+  base:
+    PRODUCT_NAME: PixelToAsciiConsole
+    PRODUCT_BUNDLE_IDENTIFIER: studio.flowdeck.PixelToAsciiConsole
+    MACOSX_DEPLOYMENT_TARGET: 14.0
+    SWIFT_VERSION: 5.9
+    GENERATE_INFOPLIST_FILE: YES
+    CODE_SIGNING_ALLOWED: NO
+packages:
+  PixelToAscii:
+    path: ../PixelToAscii
+targets:
+  PixelToAsciiConsole:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: Sources/PixelToAsciiConsoleApp
+    dependencies:
+      - package: PixelToAscii
+        product: PixelToAsciiUI
+schemes:
+  PixelToAsciiConsole:
+    build:
+      targets:
+        PixelToAsciiConsole: all
+    run:
+      config: Debug
