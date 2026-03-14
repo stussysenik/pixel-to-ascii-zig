@@ -12,7 +12,7 @@ let package = Package(
         .library(
             name: "PixelToAsciiUI",
             targets: ["PixelToAsciiUI"]
-        ),
+        )
     ],
     targets: [
         // C library target — wraps the Zig-compiled static library
@@ -26,7 +26,12 @@ let package = Package(
         .target(
             name: "PixelToAsciiEngine",
             dependencies: ["CPixelToAscii"],
-            path: "Sources/PixelToAsciiEngine"
+            path: "Sources/PixelToAsciiEngine",
+            linkerSettings: [
+                .linkedLibrary("pixel-to-ascii", .when(platforms: [.macOS, .iOS])),
+                .unsafeFlags(["-L", "../../zig-out/macos"], .when(platforms: [.macOS])),
+                .unsafeFlags(["-L", "../../zig-out/ios"], .when(platforms: [.iOS])),
+            ]
         ),
         // SwiftUI views
         .target(

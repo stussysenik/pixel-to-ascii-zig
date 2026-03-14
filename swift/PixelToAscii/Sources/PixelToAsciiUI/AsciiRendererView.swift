@@ -1,85 +1,73 @@
-import SwiftUI
 import PixelToAsciiEngine
+import SwiftUI
 
-/// SwiftUI view that renders ASCII art from the Zig engine using Canvas.
-/// Reads from the engine's output buffer on each display link tick.
+/// SwiftUI renderer that paints the engine output as live ASCII glyphs.
 public struct AsciiRendererView: View {
     let engine: AsciiEngine
-    let charset: String
-
-    @State private var displayLink: DisplayLinkTimer?
+    let charset: [Character]
 
     public init(engine: AsciiEngine, charset: String = AsciiEngine.charset) {
         self.engine = engine
-        self.charset = charset
+        self.charset = Array(charset)
     }
 
     public var body: some View {
-        Canvas { context, size in
-            guard engine.isInitialized else { return }
-            guard let buffer = engine.render() else { return }
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { _ in
+            Canvas(opaque: true, colorMode: .linear) { context, size in
+                context.fill(
+                    Path(CGRect(origin: .zero, size: size)),
+                    with: .color(Color(red: 0.03, green: 0.04, blue: 0.05))
+                )
 
-            let cols = Int(engine.cols)
-            let rows = Int(engine.rows)
-            let charArray = Array(charset)
-            let charCount = charArray.count
+                guard engine.isInitialized else { return }
+                guard let buffer = engine.render() else { return }
 
-            let cellW = size.width / CGFloat(cols)
-            let cellH = size.height / CGFloat(rows)
-            let fontSize = min(cellW / 0.6, cellH)
+                let cols = Int(engine.cols)
+                let rows = Int(engine.rows)
+                guard cols > 0, rows > 0, !charset.isEmpty else { return }
 
-            for row in 0..<rows {
-                for col in 0..<cols {
-                    let idx = (row * cols + col) * 4
-                    guard idx + 3 < buffer.count else { continue }
+                let cellWidth = size.width / CGFloat(cols)
+                let cellHeight = size.height / CGFloat(rows)
+                let fontSize = min(cellWidth / 0.58, cellHeight)
 
-                    let charIdx = Int(buffer[idx])
-                    let r = Double(buffer[idx + 1]) / 255.0
-                    let g = Double(buffer[idx + 2]) / 255.0
-                    let b = Double(buffer[idx + 3]) / 255.0
+                for row in 0..<rows {
+                    for col in 0..<cols {
+                        let index = (row * cols + col) * 4
+                        guard index + 3 < buffer.count else { continue }
 
-                    let safeCharIdx = min(charIdx, charCount - 1)
-                    let ch = String(charArray[safeCharIdx])
+                        let glyphIndex = min(Int(buffer[index]), charset.count - 1)
+                        let red = Double(buffer[index + 1]) / 255.0
+                        let green = Double(buffer[index + 2]) / 255.0
+                        let blue = Double(buffer[index + 3]) / 255.0
 
-                    let x = CGFloat(col) * cellW
-                    let y = CGFloat(row) * cellH
+                        if glyphIndex == 0, red == 0, green == 0, blue == 0 {
+                            continue
+                        }
 
-                    var text = Text(ch)
-                        .font(.system(size: fontSize, design: .monospaced))
-                        .foregroundColor(Color(red: r, green: g, blue: b))
+                        let glyph = String(charset[glyphIndex])
+                        let point = CGPoint(
+                            x: CGFloat(col) * cellWidth + cellWidth / 2,
+                            y: CGFloat(row) * cellHeight + cellHeight / 2
+                        )
 
-                    context.draw(text, at: CGPoint(x: x + cellW / 2, y: y + cellH / 2))
+                        let text = Text(glyph)
+                            .font(.system(size: fontSize, weight: .medium, design: .monospaced))
+                            .foregroundColor(Color(red: red, green: green, blue: blue))
+
+                        context.draw(text, at: point)
+                    }
                 }
             }
+            .background(
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.08, green: 0.09, blue: 0.12),
+                        Color.black,
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
         }
-        .background(.black)
-        .onAppear { startDisplayLink() }
-        .onDisappear { stopDisplayLink() }
-    }
-
-    private func startDisplayLink() {
-        displayLink = DisplayLinkTimer { }
-    }
-
-    private func stopDisplayLink() {
-        displayLink = nil
-    }
-}
-
-/// Simple display-link-based timer for driving render updates.
-final class DisplayLinkTimer {
-    private var timer: Timer?
-    private let callback: () -> Void
-
-    init(callback: @escaping () -> Void) {
-        self.callback = callback
-        // ~60fps fallback timer (CADisplayLink isn't directly available in SwiftUI)
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { _ in
-            callback()
-        }
-    }
-
-    deinit {
-        timer?.invalidate()
     }
 }
