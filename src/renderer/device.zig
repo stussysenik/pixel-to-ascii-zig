@@ -1,3 +1,4 @@
+const builtin = @import("builtin");
 const std = @import("std");
 
 // Configuration for the ASCII renderer
@@ -64,13 +65,15 @@ pub const Stats = struct {
 
 // Mouse effect state
 const MouseEffect = struct {
+    const Point = struct { x: f32, y: f32 };
+
     x: f32 = -1.0, // Normalized 0-1, -1 means inactive
     y: f32 = -1.0,
     trail: struct {
-        positions: [24]struct { x: f32, y: f32 },
+        positions: [24]Point,
         count: u32,
     } = .{
-        .positions = [_]struct { x: f32, y: f32 }{.{ .x = -1, .y = -1 }} ** 24,
+        .positions = [_]Point{.{ .x = -1, .y = -1 }} ** 24,
         .count = 0,
     },
 };
@@ -126,6 +129,7 @@ pub const AsciiRenderer = struct {
 
     // Time tracking
     start_time: i64 = 0,
+    simulated_time_ms: i64 = 0,
 
     // Initialize the renderer
     pub fn init(allocator: std.mem.Allocator, config: Config) !AsciiRenderer {
@@ -163,7 +167,7 @@ pub const AsciiRenderer = struct {
             .grid = grid,
             .output_buffer = output_buffer,
             .charset = charset,
-            .start_time = std.time.milliTimestamp(),
+            .start_time = if (builtin.target.os.tag == .freestanding) 0 else std.time.milliTimestamp(),
         };
     }
 
@@ -261,6 +265,11 @@ pub const AsciiRenderer = struct {
 
     // Get current time in seconds
     fn getCurrentTime(self: *AsciiRenderer) f32 {
+        if (builtin.target.os.tag == .freestanding) {
+            const simulated_ms: f32 = @floatFromInt(self.simulated_time_ms);
+            return simulated_ms / 1000.0;
+        }
+
         const now = std.time.milliTimestamp();
         const delta: f32 = @floatFromInt(now - self.start_time);
         return delta / 1000.0;
@@ -393,7 +402,8 @@ pub const AsciiRenderer = struct {
     // For each grid cell: sample video pixel, compute brightness, apply effects,
     // write [char_index, r, g, b] to output buffer
     pub fn render(self: *AsciiRenderer) ![]const u8 {
-        const start_ns = std.time.nanoTimestamp();
+        const use_simulated_clock = builtin.target.os.tag == .freestanding;
+        const start_ns = if (use_simulated_clock) @as(i128, 0) else std.time.nanoTimestamp();
 
         const cols = self.grid.cols;
         const rows = self.grid.rows;
@@ -491,17 +501,27 @@ pub const AsciiRenderer = struct {
         }
 
         // Track performance
-        const end_ns = std.time.nanoTimestamp();
-        const frame_time_ns = end_ns - start_ns;
-        const frame_time_ms: f32 = @as(f32, @floatFromInt(frame_time_ns)) / 1_000_000.0;
+        const frame_time_ms: f32 = if (use_simulated_clock)
+            16.67
+        else blk: {
+            const end_ns = std.time.nanoTimestamp();
+            const frame_time_ns = end_ns - start_ns;
+            break :blk @as(f32, @floatFromInt(frame_time_ns)) / 1_000_000.0;
+        };
 
         self.stats.frame_count += 1;
-        const now = std.time.milliTimestamp();
-        if (now - self.stats.last_fps_update >= 1000) {
-            self.stats.fps = @floatFromInt(self.stats.frame_count);
+        if (use_simulated_clock) {
+            self.simulated_time_ms += 16;
             self.stats.frame_time_ms = frame_time_ms;
-            self.stats.frame_count = 0;
-            self.stats.last_fps_update = now;
+            self.stats.fps = 1000.0 / frame_time_ms;
+        } else {
+            const now = std.time.milliTimestamp();
+            if (now - self.stats.last_fps_update >= 1000) {
+                self.stats.fps = @floatFromInt(self.stats.frame_count);
+                self.stats.frame_time_ms = frame_time_ms;
+                self.stats.frame_count = 0;
+                self.stats.last_fps_update = now;
+            }
         }
 
         return self.output_buffer;

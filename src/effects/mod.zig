@@ -25,13 +25,15 @@ pub const EffectsConfig = struct {
 
 // Mouse effect state
 pub const MouseEffect = struct {
+    const Point = struct { x: f32, y: f32 };
+
     x: f32 = -1.0, // Normalized 0-1, -1 means inactive
     y: f32 = -1.0,
     trail: struct {
-        positions: [MAX_TRAIL_LENGTH]struct { x: f32, y: f32 },
+        positions: [MAX_TRAIL_LENGTH]Point,
         count: u32,
     } = .{
-        .positions = [_]struct { x: f32, y: f32 }{.{ .x = -1, .y = -1 }} ** MAX_TRAIL_LENGTH,
+        .positions = [_]Point{.{ .x = -1, .y = -1 }} ** MAX_TRAIL_LENGTH,
         .count = 0,
     },
 

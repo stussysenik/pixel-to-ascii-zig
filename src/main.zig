@@ -10,7 +10,7 @@ const allocator = gpa.allocator();
 var ascii_renderer: ?renderer.AsciiRenderer = null;
 
 // Export initialization function
-export fn init(width: u32, height: u32, num_columns: u32, font_size: f32) callconv(.C) bool {
+export fn init(width: u32, height: u32, num_columns: u32, font_size: f32) bool {
     const config = renderer.Config{
         .width = width,
         .height = height,
@@ -35,7 +35,7 @@ export fn updateVideoFrame(
     width: u32,
     height: u32,
     stride: u32,
-) callconv(.C) bool {
+) bool {
     if (ascii_renderer == null) return false;
 
     const slice = data[0 .. width * height * 4]; // RGBA format
@@ -48,44 +48,44 @@ export fn updateVideoFrame(
 }
 
 // Export function to update mouse position (normalized 0-1)
-export fn updateMouse(x: f32, y: f32) callconv(.C) void {
+export fn updateMouse(x: f32, y: f32) void {
     if (ascii_renderer) |*r| {
         r.updateMouse(x, y);
     }
 }
 
 // Export function to update audio level (0-1)
-export fn updateAudio(level: f32, reactivity: f32, sensitivity: f32) callconv(.C) void {
+export fn updateAudio(level: f32, reactivity: f32, sensitivity: f32) void {
     if (ascii_renderer) |*r| {
         r.updateAudio(level, reactivity, sensitivity);
     }
 }
 
 // Export function to add ripple at position
-export fn addRipple(x: f32, y: f32) callconv(.C) void {
+export fn addRipple(x: f32, y: f32) void {
     if (ascii_renderer) |*r| {
         r.addRipple(x, y);
     }
 }
 
 // Export function to set rendering options
-export fn setOptions(colored: bool, blend: f32, highlight: f32, brightness: f32) callconv(.C) void {
+export fn setOptions(colored: bool, blend: f32, highlight: f32, brightness: f32) void {
     if (ascii_renderer) |*r| {
         r.setOptions(colored, blend, highlight, brightness);
     }
 }
 
 // Export function to render frame and get output buffer
-export fn render() callconv(.C) [*]const u8 {
+export fn render() ?[*]const u8 {
     if (ascii_renderer) |*r| {
-        const buffer = r.render() catch return @as([*]const u8, @ptrFromInt(0));
+        const buffer = r.render() catch return null;
         return buffer.ptr;
     }
-    return @as([*]const u8, @ptrFromInt(0));
+    return null;
 }
 
 // Export function to get output buffer size
-export fn getOutputBufferSize() callconv(.C) usize {
+export fn getOutputBufferSize() usize {
     if (ascii_renderer) |*r| {
         return r.getOutputBufferSize();
     }
@@ -93,7 +93,7 @@ export fn getOutputBufferSize() callconv(.C) usize {
 }
 
 // Export function to get grid columns
-export fn getGridCols() callconv(.C) u32 {
+export fn getGridCols() u32 {
     if (ascii_renderer) |*r| {
         return r.getGridCols();
     }
@@ -101,7 +101,7 @@ export fn getGridCols() callconv(.C) u32 {
 }
 
 // Export function to get grid rows
-export fn getGridRows() callconv(.C) u32 {
+export fn getGridRows() u32 {
     if (ascii_renderer) |*r| {
         return r.getGridRows();
     }
@@ -109,7 +109,7 @@ export fn getGridRows() callconv(.C) u32 {
 }
 
 // Export function to get performance stats
-export fn getStats() callconv(.C) u64 {
+export fn getStats() u64 {
     if (ascii_renderer) |*r| {
         const stats = r.getStats();
         // Pack fps and frame_time into u64 (two f32s)
@@ -121,7 +121,7 @@ export fn getStats() callconv(.C) u64 {
 }
 
 // Export cleanup function
-export fn cleanup() callconv(.C) void {
+export fn cleanup() void {
     if (ascii_renderer) |*r| {
         r.deinit();
     }
@@ -135,44 +135,44 @@ export fn cleanup() callconv(.C) void {
 }
 
 // C ABI prefixed wrappers for Swift/native consumers
-export fn pta_init(width: u32, height: u32, num_columns: u32, font_size: f32) callconv(.C) bool {
+export fn pta_init(width: u32, height: u32, num_columns: u32, font_size: f32) bool {
     return init(width, height, num_columns, font_size);
 }
 
-export fn pta_update_video_frame(data: [*]const u8, width: u32, height: u32, stride: u32) callconv(.C) bool {
+export fn pta_update_video_frame(data: [*]const u8, width: u32, height: u32, stride: u32) bool {
     return updateVideoFrame(data, width, height, stride);
 }
 
-export fn pta_render() callconv(.C) [*]const u8 {
+export fn pta_render() ?[*]const u8 {
     return render();
 }
 
-export fn pta_get_grid_cols() callconv(.C) u32 {
+export fn pta_get_grid_cols() u32 {
     return getGridCols();
 }
 
-export fn pta_get_grid_rows() callconv(.C) u32 {
+export fn pta_get_grid_rows() u32 {
     return getGridRows();
 }
 
-export fn pta_set_options(colored: bool, blend: f32, highlight: f32, brightness: f32) callconv(.C) void {
+export fn pta_set_options(colored: bool, blend: f32, highlight: f32, brightness: f32) void {
     return setOptions(colored, blend, highlight, brightness);
 }
 
-export fn pta_update_mouse(x: f32, y: f32) callconv(.C) void {
+export fn pta_update_mouse(x: f32, y: f32) void {
     return updateMouse(x, y);
 }
 
-export fn pta_add_ripple(x: f32, y: f32) callconv(.C) void {
+export fn pta_add_ripple(x: f32, y: f32) void {
     return addRipple(x, y);
 }
 
-export fn pta_cleanup() callconv(.C) void {
+export fn pta_cleanup() void {
     return cleanup();
 }
 
 // Panic handler for WASM — Zig 0.13+ signature
-pub fn panic(msg: []const u8, _: ?*std.builtin.StackTrace, _: usize) noreturn {
+pub fn panic(msg: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
     _ = msg;
     @trap();
 }
