@@ -43,13 +43,12 @@ pub const MouseEffect = struct {
                 self.trail.positions[self.trail.count] = .{ .x = self.x, .y = self.y };
                 self.trail.count += 1;
             } else {
-                // Shift trail to make room at beginning
+                // Shift trail to make room
                 const max_idx = @as(usize, trail_length) - 1;
-                std.mem.copy(
-                    struct { x: f32, y: f32 },
-                    self.trail.positions[0..max_idx],
-                    self.trail.positions[1..trail_length]
-                );
+                var i: usize = 0;
+                while (i < max_idx) : (i += 1) {
+                    self.trail.positions[i] = self.trail.positions[i + 1];
+                }
                 self.trail.positions[max_idx] = .{ .x = self.x, .y = self.y };
             }
         }
@@ -104,7 +103,7 @@ pub const RippleEffect = struct {
     // Initialize all ripples as inactive
     pub fn init() RippleEffect {
         var effect: RippleEffect = undefined;
-        for (effect.ripples) |*r| {
+        for (&effect.ripples) |*r| {
             r.active = false;
         }
         return effect;
@@ -113,7 +112,7 @@ pub const RippleEffect = struct {
     // Add a new ripple at position
     pub fn add(self: *RippleEffect, x: f32, y: f32, current_time: f32) void {
         // Find inactive ripple slot
-        for (self.ripples) |*ripple| {
+        for (&self.ripples) |*ripple| {
             if (!ripple.active) {
                 ripple.* = .{
                     .x = x,
@@ -139,7 +138,7 @@ pub const RippleEffect = struct {
     pub fn update(self: *RippleEffect, current_time: f32, max_lifetime: f32) void {
         var active_count: u32 = 0;
 
-        for (self.ripples) |*ripple| {
+        for (&self.ripples) |*ripple| {
             if (ripple.active) {
                 const age = current_time - ripple.start_time;
                 if (age > max_lifetime) {
@@ -252,23 +251,12 @@ pub const EffectsManager = struct {
     pub fn updateAll(self: *EffectsManager, current_time: f32, grid_cols: u32, grid_rows: u32) void {
         if (self.config.ripple_enabled) {
             // Calculate maximum ripple lifetime based on grid size
-            const max_dist = std.math.sqrt(@intToFloat(f32, grid_cols * grid_cols + grid_rows * grid_rows));
+            const gc: f32 = @floatFromInt(grid_cols);
+            const gr: f32 = @floatFromInt(grid_rows);
+            const max_dist = @sqrt(gc * gc + gr * gr);
             const max_lifetime = max_dist / self.config.ripple_speed + 1.0;
             self.ripples.update(current_time, max_lifetime);
         }
-    }
-
-    // Get uniform data for all effects
-    pub fn getAllUniformData(self: *const EffectsManager) struct {
-        mouse: MouseEffect.getUniformData.Type,
-        ripple: RippleEffect.getUniformData.Type,
-        audio: AudioEffect.getUniformData.Type,
-    } {
-        return .{
-            .mouse = self.mouse.getUniformData(),
-            .ripple = self.ripples.getUniformData(),
-            .audio = self.audio.getUniformData(),
-        };
     }
 
     // Check if any effects are active

@@ -1,0 +1,5 @@
+module CPixelToAscii {
+    header "../../../../include/pixel_to_ascii.h"
+    link "pixel-to-ascii"
+    export *
+}

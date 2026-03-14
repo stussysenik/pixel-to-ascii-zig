@@ -41,7 +41,7 @@ pub fn build(b: *std.Build) void {
     const wasm_target = b.resolveTargetQuery(.{
         .cpu_arch = .wasm32,
         .os_tag = .freestanding,
-    }) catch unreachable;
+    });
 
     const wasm_exe = b.addExecutable(.{
         .name = "pixel-to-ascii-wasm",
@@ -68,29 +68,60 @@ pub fn build(b: *std.Build) void {
     // Optimize WASM output
     if (optimize != .Debug) {
         // Strip symbols for release builds
-        wasm_exe.strip = true;
+        wasm_exe.root_module.strip = true;
     }
 
-    // Generate JavaScript bindings
-    const js_bindings = b.addExecutable(.{
-        .name = "generate-js-bindings",
-        .root_source_file = b.path("tools/generate_js.zig"),
-        .target = b.host,
+    // Static library for native/SwiftUI targets
+    const lib = b.addStaticLibrary(.{
+        .name = "pixel-to-ascii",
+        .root_source_file = b.path("src/main.zig"),
+        .target = target,
+        .optimize = optimize,
     });
 
-    const generate_js = b.addRunArtifact(js_bindings);
-    generate_js.addArg("--wasm");
-    generate_js.addFileArg(wasm_exe.getEmittedBin());
-    generate_js.addFileArg(b.path("src/main.zig"));
-    generate_js.addArg("--output");
-    generate_js.addFileArg(b.path("dist/pixel-to-ascii-wasm.js"));
+    const lib_install = b.addInstallArtifact(lib, .{});
+    const lib_step = b.step("lib", "Build static library for native targets");
+    lib_step.dependOn(&lib_install.step);
 
-    const js_step = b.step("js", "Generate JavaScript bindings");
-    js_step.dependOn(&generate_js.step);
-    wasm_step.dependOn(&js_step);
+    // macOS arm64 static library
+    const macos_target = b.resolveTargetQuery(.{
+        .cpu_arch = .aarch64,
+        .os_tag = .macos,
+    });
 
-    // Complete build for web (WASM + JS)
-    const web_step = b.step("web", "Build for web (WASM + JS bindings)");
+    const macos_lib = b.addStaticLibrary(.{
+        .name = "pixel-to-ascii",
+        .root_source_file = b.path("src/main.zig"),
+        .target = macos_target,
+        .optimize = optimize,
+    });
+
+    const macos_install = b.addInstallArtifact(macos_lib, .{
+        .dest_dir = .{ .custom = "macos" },
+    });
+    const macos_step = b.step("macos", "Build macOS arm64 static library");
+    macos_step.dependOn(&macos_install.step);
+
+    // iOS arm64 static library
+    const ios_target = b.resolveTargetQuery(.{
+        .cpu_arch = .aarch64,
+        .os_tag = .ios,
+    });
+
+    const ios_lib = b.addStaticLibrary(.{
+        .name = "pixel-to-ascii",
+        .root_source_file = b.path("src/main.zig"),
+        .target = ios_target,
+        .optimize = optimize,
+    });
+
+    const ios_install = b.addInstallArtifact(ios_lib, .{
+        .dest_dir = .{ .custom = "ios" },
+    });
+    const ios_step = b.step("ios", "Build iOS arm64 static library");
+    ios_step.dependOn(&ios_install.step);
+
+    // Complete build for web (WASM only — no external JS generator needed)
+    const web_step = b.step("web", "Build for web (WASM module)");
     web_step.dependOn(&wasm_install.step);
-    web_step.dependOn(&js_step);
 }
