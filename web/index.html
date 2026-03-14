@@ -1,128 +1,353 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>pixel-to-ascii — Real-time Video to ASCII Art</title>
-  <link rel="stylesheet" href="css/styles.css">
-  <link rel="stylesheet" href="css/motion.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-</head>
-<body>
-  <div class="app">
-    <!-- Header -->
-    <header class="header">
-      <span class="header-title">pixel-to-ascii</span>
-      <div class="header-links">
-        <a href="https://github.com/nickcostanzo-work/pixel-to-ascii-zig" target="_blank">GitHub</a>
-        <a href="https://www.npmjs.com/package/@zig-wasm/pixel-to-ascii" target="_blank">npm</a>
-      </div>
-    </header>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>ASCII VISUAL CONSOLE // pixel-to-ascii</title>
+        <link
+            rel="icon"
+            href='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"%3E%3Crect width="64" height="64" fill="%23090b0d"/%3E%3Cpath d="M10 14h44v8H10zm0 14h30v8H10zm0 14h44v8H10z" fill="%23ff6a2a"/%3E%3C/svg%3E'
+        />
+        <link rel="stylesheet" href="css/styles.css" />
+        <link rel="stylesheet" href="css/motion.css" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Teko:wght@400;500;600&display=swap"
+            rel="stylesheet"
+        />
+    </head>
+    <body>
+        <div class="app-shell">
+            <div class="ambient-grid" aria-hidden="true"></div>
 
-    <!-- Landing: Drop zone -->
-    <div class="main" id="drop-zone-container">
-      <div class="drop-zone-container">
-        <div class="drop-zone" id="drop-zone">
-          <div class="drop-zone-icon">&#x25B6;&#xFE0E;</div>
-          <div class="drop-zone-text">Drop a video file here</div>
-          <div class="drop-zone-hint">or click to browse &middot; accepts any video format</div>
-          <input type="file" accept="video/*">
+            <header class="topbar console-panel fade-in">
+                <div class="brand-lockup">
+                    <p class="label brand-kicker">
+                        System Role // Staff Experience Design Engineer
+                    </p>
+                    <div class="brand-row">
+                        <h1>ASCII VISUAL CONSOLE</h1>
+                        <span class="brand-tag">Zig + WASM + SwiftUI</span>
+                    </div>
+                    <p class="brand-copy">
+                        An Evangelion-coded raster lab for dropping motion and
+                        still assets into a live ASCII translation pipeline.
+                    </p>
+                </div>
+
+                <div class="topbar-side">
+                    <div class="runtime-cluster">
+                        <div class="signal-card">
+                            <span class="label">Runtime</span>
+                            <strong id="runtime-status">Booting</strong>
+                        </div>
+                        <div class="signal-card">
+                            <span class="label">Asset</span>
+                            <strong id="asset-status">No signal</strong>
+                        </div>
+                    </div>
+
+                    <nav class="utility-links" aria-label="Project links">
+                        <a
+                            href="https://github.com/nickcostanzo-work/pixel-to-ascii-zig"
+                            target="_blank"
+                            rel="noreferrer"
+                            >GitHub</a
+                        >
+                        <a
+                            href="https://www.npmjs.com/package/@zig-wasm/pixel-to-ascii"
+                            target="_blank"
+                            rel="noreferrer"
+                            >npm</a
+                        >
+                    </nav>
+                </div>
+            </header>
+
+            <main class="workspace">
+                <aside
+                    class="intel-panel console-panel fade-in fade-in-delay-1"
+                >
+                    <section class="intel-section">
+                        <span class="label">Input Protocol</span>
+                        <ul class="intel-list">
+                            <li>
+                                Drop still or moving visual assets directly into
+                                the stage.
+                            </li>
+                            <li>
+                                Zig samples RGBA cells into a colored ASCII
+                                output buffer.
+                            </li>
+                            <li>
+                                Mouse glow and click ripples keep the frame
+                                feeling alive.
+                            </li>
+                        </ul>
+                    </section>
+
+                    <section class="intel-section">
+                        <span class="label">Asset Telemetry</span>
+                        <div class="telemetry-table">
+                            <div class="telemetry-row">
+                                <span>File</span>
+                                <strong id="asset-name">Awaiting ingest</strong>
+                            </div>
+                            <div class="telemetry-row">
+                                <span>Resolution</span>
+                                <strong id="asset-resolution">-- x --</strong>
+                            </div>
+                            <div class="telemetry-row">
+                                <span>Mode</span>
+                                <strong id="asset-mode-readout">Idle</strong>
+                            </div>
+                            <div class="telemetry-row">
+                                <span>Grid</span>
+                                <strong id="asset-grid-readout">-- x --</strong>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="intel-section">
+                        <span class="label">Render Notes</span>
+                        <p class="intel-copy">
+                            Presentation leans Jakub for panel choreography,
+                            Emil for control immediacy, and Jhey only where
+                            terminal theatrics add signal instead of noise.
+                        </p>
+                    </section>
+                </aside>
+
+                <section
+                    class="stage-panel console-panel fade-in fade-in-delay-2"
+                >
+                    <div class="stage-head">
+                        <div>
+                            <span class="label">Render Stage</span>
+                            <h2 id="stage-title">Stand by for asset ingest</h2>
+                        </div>
+                        <span class="mode-pill" id="stage-mode">Idle</span>
+                    </div>
+
+                    <div class="stage-frame" id="canvas-container">
+                        <div class="warning-stripe">
+                            Absolute Territory // Visual Signal Analysis
+                        </div>
+
+                        <div class="drop-layer" id="drop-zone-container">
+                            <div class="drop-zone" id="drop-zone">
+                                <div
+                                    class="drop-zone-target"
+                                    aria-hidden="true"
+                                ></div>
+                                <div class="drop-zone-copy">
+                                    <p class="drop-zone-kicker">
+                                        Drag / Drop / Analyze
+                                    </p>
+                                    <h3>
+                                        Deploy a visual asset into the console
+                                    </h3>
+                                    <p>
+                                        Feed it `png`, `jpg`, `webp`, `gif`,
+                                        `mp4`, `mov`, or `webm` and the raster
+                                        field will resolve into live ASCII
+                                        cells.
+                                    </p>
+                                </div>
+                                <div class="drop-zone-actions">
+                                    <label
+                                        class="btn btn-primary"
+                                        for="asset-input"
+                                        >Choose Asset</label
+                                    >
+                                    <span class="drop-zone-spec"
+                                        >Still + motion ingestion enabled</span
+                                    >
+                                </div>
+                                <input
+                                    id="asset-input"
+                                    type="file"
+                                    accept="image/*,video/*"
+                                />
+                            </div>
+                        </div>
+
+                        <div class="player-layer hidden" id="player-container">
+                            <canvas
+                                id="ascii-canvas"
+                                class="ascii-canvas"
+                            ></canvas>
+
+                            <div class="canvas-overlay top-left">
+                                <span class="hud-chip" id="stat-fps"
+                                    >-- FPS</span
+                                >
+                                <span class="hud-chip" id="stat-frametime"
+                                    >-- ms</span
+                                >
+                                <span class="hud-chip" id="stat-grid"
+                                    >-- x --</span
+                                >
+                            </div>
+
+                            <div class="canvas-overlay top-right">
+                                <span
+                                    class="hud-chip accent"
+                                    id="signal-message"
+                                    >Renderer warming up</span
+                                >
+                            </div>
+
+                            <div class="canvas-overlay bottom-left">
+                                <span class="hud-chip" id="asset-kind-chip"
+                                    >No signal</span
+                                >
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <aside
+                    class="control-panel console-panel fade-in fade-in-delay-3"
+                >
+                    <section class="control-section control-intro">
+                        <span class="label">Control Stack</span>
+                        <p>
+                            Dial density, brightness, and interactions without
+                            leaving the console.
+                        </p>
+                    </section>
+
+                    <section class="control-section">
+                        <h3>Transport</h3>
+                        <div class="control-actions">
+                            <button class="btn btn-primary" id="play-btn">
+                                Pause
+                            </button>
+                            <button class="btn" id="reset-btn">
+                                Load another
+                            </button>
+                        </div>
+                    </section>
+
+                    <section class="control-section">
+                        <h3>Grid</h3>
+                        <div class="control-row">
+                            <label for="cols-slider">Columns</label>
+                            <span class="value" id="cols-value">80</span>
+                        </div>
+                        <input
+                            type="range"
+                            class="slider"
+                            id="cols-slider"
+                            min="20"
+                            max="200"
+                            value="80"
+                        />
+                    </section>
+
+                    <section class="control-section">
+                        <h3>Rendering</h3>
+                        <div class="control-row">
+                            <label for="colored-toggle">Colored</label>
+                            <div
+                                class="toggle active"
+                                id="colored-toggle"
+                                role="switch"
+                                aria-checked="true"
+                            >
+                                <div class="toggle-knob"></div>
+                            </div>
+                        </div>
+
+                        <div class="control-row">
+                            <label for="brightness-slider">Brightness</label>
+                            <span class="value" id="brightness-value">1.0</span>
+                        </div>
+                        <input
+                            type="range"
+                            class="slider"
+                            id="brightness-slider"
+                            min="0.2"
+                            max="3.0"
+                            step="0.1"
+                            value="1.0"
+                        />
+
+                        <div class="control-row">
+                            <label for="blend-slider">Blend</label>
+                            <span class="value" id="blend-value">0</span>
+                        </div>
+                        <input
+                            type="range"
+                            class="slider"
+                            id="blend-slider"
+                            min="0"
+                            max="100"
+                            value="0"
+                        />
+
+                        <div class="control-row">
+                            <label for="highlight-slider">Highlight</label>
+                            <span class="value" id="highlight-value">0</span>
+                        </div>
+                        <input
+                            type="range"
+                            class="slider"
+                            id="highlight-slider"
+                            min="0"
+                            max="100"
+                            value="0"
+                        />
+                    </section>
+
+                    <section class="control-section">
+                        <h3>Character Set</h3>
+                        <select class="select" id="charset-select">
+                            <option value="standard">
+                                Standard (.:-=+*#%@)
+                            </option>
+                            <option value="blocks">Blocks</option>
+                            <option value="minimal">Minimal (.oO@)</option>
+                            <option value="binary">Binary</option>
+                            <option value="detailed">
+                                Detailed (70 chars)
+                            </option>
+                            <option value="dots">Dots</option>
+                            <option value="arrows">Arrows</option>
+                        </select>
+                    </section>
+
+                    <section class="control-section">
+                        <h3>Effects</h3>
+                        <div class="control-row">
+                            <label for="mouse-toggle">Mouse Glow</label>
+                            <div
+                                class="toggle active"
+                                id="mouse-toggle"
+                                role="switch"
+                                aria-checked="true"
+                            >
+                                <div class="toggle-knob"></div>
+                            </div>
+                        </div>
+                        <div class="control-row">
+                            <label for="ripple-toggle">Click Ripple</label>
+                            <div
+                                class="toggle active"
+                                id="ripple-toggle"
+                                role="switch"
+                                aria-checked="true"
+                            >
+                                <div class="toggle-knob"></div>
+                            </div>
+                        </div>
+                    </section>
+                </aside>
+            </main>
         </div>
-      </div>
-    </div>
 
-    <!-- Player: ASCII canvas + controls -->
-    <div class="main hidden" id="player-container">
-      <!-- Canvas area -->
-      <div class="canvas-container" id="canvas-container">
-        <canvas id="ascii-canvas" class="ascii-canvas"></canvas>
-
-        <!-- Stats overlay -->
-        <div class="stats-overlay">
-          <span id="stat-fps">-- FPS</span>
-          <span id="stat-frametime">--ms</span>
-          <span id="stat-grid">--x--</span>
-        </div>
-      </div>
-
-      <!-- Control panel -->
-      <div class="control-panel panel entering">
-        <!-- Playback -->
-        <div class="control-section">
-          <h3>Playback</h3>
-          <button class="btn btn-primary" id="play-btn" style="width:100%">Pause</button>
-        </div>
-
-        <!-- Grid -->
-        <div class="control-section">
-          <h3>Grid</h3>
-          <div class="control-row">
-            <label>Columns</label>
-            <span class="value" id="cols-value">80</span>
-          </div>
-          <input type="range" class="slider" id="cols-slider" min="20" max="200" value="80">
-        </div>
-
-        <!-- Rendering -->
-        <div class="control-section">
-          <h3>Rendering</h3>
-
-          <div class="control-row">
-            <label>Colored</label>
-            <div class="toggle active" id="colored-toggle"><div class="toggle-knob"></div></div>
-          </div>
-
-          <div class="control-row">
-            <label>Brightness</label>
-            <span class="value" id="brightness-value">1.0</span>
-          </div>
-          <input type="range" class="slider" id="brightness-slider" min="0.2" max="3.0" step="0.1" value="1.0">
-
-          <div class="control-row">
-            <label>Blend</label>
-            <span class="value" id="blend-value">0</span>
-          </div>
-          <input type="range" class="slider" id="blend-slider" min="0" max="100" value="0">
-
-          <div class="control-row">
-            <label>Highlight</label>
-            <span class="value" id="highlight-value">0</span>
-          </div>
-          <input type="range" class="slider" id="highlight-slider" min="0" max="100" value="0">
-        </div>
-
-        <!-- Character set -->
-        <div class="control-section">
-          <h3>Character Set</h3>
-          <select class="select" id="charset-select">
-            <option value="standard">Standard (.:-=+*#%@)</option>
-            <option value="blocks">Blocks</option>
-            <option value="minimal">Minimal (.oO@)</option>
-            <option value="binary">Binary</option>
-            <option value="detailed">Detailed (70 chars)</option>
-            <option value="dots">Dots</option>
-            <option value="arrows">Arrows</option>
-          </select>
-        </div>
-
-        <!-- Effects -->
-        <div class="control-section">
-          <h3>Effects</h3>
-          <div class="control-row">
-            <label>Mouse Glow</label>
-            <div class="toggle active" id="mouse-toggle"><div class="toggle-knob"></div></div>
-          </div>
-          <div class="control-row">
-            <label>Click Ripple</label>
-            <div class="toggle active" id="ripple-toggle"><div class="toggle-knob"></div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script type="module" src="js/app.js"></script>
-</body>
+        <script type="module" src="js/app.js"></script>
+    </body>
 </html>

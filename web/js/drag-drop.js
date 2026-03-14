@@ -1,90 +1,100 @@
-// Drag & Drop handler for video files
-// Provides visual feedback and file extraction
+// Drag and drop handler for visual assets.
+// Accepts image/* and video/* with a lightweight animated response.
 
 export class DragDropHandler {
-  constructor(dropZone, onFile) {
+  constructor(dropZone, onFile, onInvalid) {
     this.dropZone = dropZone;
     this.onFile = onFile;
+    this.onInvalid = onInvalid;
     this.dragCounter = 0;
 
     this._bind();
   }
 
   _bind() {
-    const zone = this.dropZone;
-
-    // Prevent default drag behaviors on document
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
-      document.addEventListener(event, e => e.preventDefault());
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach((eventName) => {
+      document.addEventListener(eventName, (event) => event.preventDefault());
     });
 
-    // Drop zone specific handlers
-    zone.addEventListener('dragenter', (e) => this._onDragEnter(e));
-    zone.addEventListener('dragover', (e) => this._onDragOver(e));
-    zone.addEventListener('dragleave', (e) => this._onDragLeave(e));
-    zone.addEventListener('drop', (e) => this._onDrop(e));
+    this.dropZone.addEventListener('dragenter', (event) => this._onDragEnter(event));
+    this.dropZone.addEventListener('dragover', (event) => this._onDragOver(event));
+    this.dropZone.addEventListener('dragleave', (event) => this._onDragLeave(event));
+    this.dropZone.addEventListener('drop', (event) => this._onDrop(event));
 
-    // File input fallback
-    const fileInput = zone.querySelector('input[type="file"]');
+    const fileInput = this.dropZone.querySelector('input[type="file"]');
     if (fileInput) {
-      fileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file && file.type.startsWith('video/')) {
-          this.onFile(file);
+      fileInput.addEventListener('change', (event) => {
+        const [file] = event.target.files || [];
+        if (!file) {
+          return;
         }
+
+        if (this._isSupported(file)) {
+          this.onFile(file);
+        } else if (this.onInvalid) {
+          this.onInvalid(file);
+        }
+
+        event.target.value = '';
       });
     }
   }
 
-  _onDragEnter(e) {
-    e.preventDefault();
-    this.dragCounter++;
+  _isSupported(file) {
+    return file.type.startsWith('video/') || file.type.startsWith('image/');
+  }
+
+  _onDragEnter(event) {
+    event.preventDefault();
+    this.dragCounter += 1;
     this.dropZone.classList.add('drag-over');
   }
 
-  _onDragOver(e) {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
+  _onDragOver(event) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
   }
 
-  _onDragLeave(e) {
-    e.preventDefault();
-    this.dragCounter--;
+  _onDragLeave(event) {
+    event.preventDefault();
+    this.dragCounter -= 1;
+
     if (this.dragCounter <= 0) {
       this.dragCounter = 0;
       this.dropZone.classList.remove('drag-over');
     }
   }
 
-  _onDrop(e) {
-    e.preventDefault();
+  _onDrop(event) {
+    event.preventDefault();
     this.dragCounter = 0;
     this.dropZone.classList.remove('drag-over');
+    this._spawnRipple(event);
 
-    // Create ripple effect at drop position
-    this._spawnRipple(e);
+    const files = Array.from(event.dataTransfer.files || []);
+    const supported = files.find((file) => this._isSupported(file));
 
-    // Extract video file
-    const files = e.dataTransfer.files;
-    for (const file of files) {
-      if (file.type.startsWith('video/')) {
-        this.onFile(file);
-        return;
-      }
+    if (supported) {
+      this.onFile(supported);
+      return;
+    }
+
+    if (files[0] && this.onInvalid) {
+      this.onInvalid(files[0]);
     }
   }
 
-  _spawnRipple(e) {
+  _spawnRipple(event) {
     const rect = this.dropZone.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
 
     const ripple = document.createElement('div');
     ripple.className = 'drop-ripple';
-    ripple.style.left = `${x - 50}px`;
-    ripple.style.top = `${y - 50}px`;
-    ripple.style.width = '100px';
-    ripple.style.height = '100px';
+    ripple.style.left = `${x - 56}px`;
+    ripple.style.top = `${y - 56}px`;
+    ripple.style.width = '112px';
+    ripple.style.height = '112px';
 
     this.dropZone.appendChild(ripple);
     ripple.addEventListener('animationend', () => ripple.remove());

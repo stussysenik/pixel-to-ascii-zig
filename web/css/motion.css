@@ -1,37 +1,23 @@
-/* Motion Design System
- * Three-designer weighting: Jakub 60% / Emil 25% / Jhey 15%
- *
- * Jakub Antalík — spring-driven micro-interactions, blur transitions
- * Emil Kowalski  — instant feedback, no unnecessary animation on data
- * Jhey Tompkins  — playful CSS-only effects, bouncy overshoots
+/* Motion weighting:
+ * Jakub-led panel choreography
+ * Emil-style immediate controls
+ * Light Jhey terminal theatrics
  */
 
-/* ── Motion tokens ─────────────────────────────────────────────── */
 :root {
-  /* Duration scale */
-  --motion-instant: 0ms;         /* Emil: stats, data, counters */
-  --motion-control: 150ms;       /* Emil: sliders, toggles, inputs */
-  --motion-modal: 350ms;         /* Jakub: panels, overlays, drop zone */
-  --motion-effect: 500ms;        /* Jhey: glow pulses, decorative */
-  --motion-ripple: 1.5s;         /* Jhey: click ripple expansion */
-
-  /* Easing curves */
-  --ease-control: cubic-bezier(0.25, 0.1, 0.25, 1);          /* Emil: precise, no overshoot */
-  --spring-snappy: cubic-bezier(0.22, 1, 0.36, 1);           /* Jakub: fast attack, soft settle */
-  --spring-bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);        /* Jhey: playful overshoot */
-
-  /* Blur scale for Jakub transitions */
-  --blur-enter: blur(4px);
-  --blur-none: blur(0px);
+  --motion-fast: 150ms;
+  --motion-panel: 320ms;
+  --motion-slow: 680ms;
+  --ease-snappy: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-clean: cubic-bezier(0.2, 0, 0.13, 1);
+  --ease-bouncy: cubic-bezier(0.34, 1.4, 0.64, 1);
 }
 
-/* ── Reduced motion ────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   :root {
-    --motion-control: 0ms;
-    --motion-modal: 0ms;
-    --motion-effect: 0ms;
-    --motion-ripple: 0ms;
+    --motion-fast: 0ms;
+    --motion-panel: 0ms;
+    --motion-slow: 0ms;
   }
 
   *,
@@ -40,150 +26,179 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
-/* ── Drop zone hover (Jakub — 350ms spring) ────────────────────── */
+.console-panel {
+  transition:
+    transform var(--motion-panel) var(--ease-snappy),
+    border-color var(--motion-panel) var(--ease-snappy),
+    box-shadow var(--motion-panel) var(--ease-snappy);
+}
+
+.console-panel:hover {
+  border-color: rgba(255, 118, 44, 0.5);
+}
+
 .drop-zone {
   transition:
-    border-color var(--motion-modal) var(--spring-snappy),
-    box-shadow var(--motion-modal) var(--spring-snappy),
-    transform var(--motion-modal) var(--spring-snappy),
-    filter var(--motion-modal) var(--spring-snappy);
+    transform var(--motion-panel) var(--ease-snappy),
+    border-color var(--motion-panel) var(--ease-snappy),
+    box-shadow var(--motion-panel) var(--ease-snappy),
+    background-color var(--motion-panel) var(--ease-snappy);
 }
 
 .drop-zone.drag-over {
-  border-color: var(--accent);
-  box-shadow: 0 0 30px rgba(0, 255, 136, 0.25), inset 0 0 30px rgba(0, 255, 136, 0.05);
   transform: scale(1.01);
-  filter: var(--blur-none);
+  border-color: rgba(244, 207, 110, 0.55);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 106, 42, 0.28),
+    0 0 0 1px rgba(255, 106, 42, 0.22),
+    0 24px 60px rgba(255, 106, 42, 0.18);
 }
 
-/* ── Panel enter/exit (Jakub — spring + blur fade) ─────────────── */
+.warning-stripe {
+  animation: stripe-scan 6s linear infinite;
+}
+
+.btn,
+.utility-links a,
+.select,
+.slider::-webkit-slider-thumb,
+.slider::-moz-range-thumb,
+.toggle,
+.toggle-knob {
+  transition:
+    transform var(--motion-fast) var(--ease-clean),
+    box-shadow var(--motion-fast) var(--ease-clean),
+    background-color var(--motion-fast) var(--ease-clean),
+    border-color var(--motion-fast) var(--ease-clean),
+    color var(--motion-fast) var(--ease-clean);
+}
+
+.btn:hover:not(:disabled),
+.utility-links a:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 32px rgba(255, 106, 42, 0.16);
+  border-color: rgba(255, 118, 44, 0.42);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.985);
+}
+
+.slider:active::-webkit-slider-thumb {
+  transform: scale(1.16);
+  box-shadow: 0 0 0 6px rgba(255, 106, 42, 0.18);
+}
+
+.toggle.active .toggle-knob {
+  transform: translateX(22px);
+}
+
+.player-layer .ascii-canvas {
+  animation: canvas-arrival var(--motion-panel) var(--ease-snappy);
+}
+
+.hud-chip.accent {
+  animation: chip-pulse 2.6s var(--ease-bouncy) infinite;
+}
+
+.drop-ripple {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 50%;
+  border: 2px solid rgba(244, 207, 110, 0.72);
+  animation: drop-ripple var(--motion-slow) var(--ease-bouncy) forwards;
+}
+
 .panel {
   transition:
-    opacity var(--motion-modal) var(--spring-snappy),
-    transform var(--motion-modal) var(--spring-snappy),
-    filter var(--motion-modal) var(--spring-snappy);
+    opacity var(--motion-panel) var(--ease-snappy),
+    transform var(--motion-panel) var(--ease-snappy),
+    filter var(--motion-panel) var(--ease-snappy);
 }
 
 .panel.entering {
   opacity: 0;
-  transform: translateX(20px);
-  filter: var(--blur-enter);
+  transform: translateY(18px);
+  filter: blur(8px);
 }
 
 .panel.visible {
   opacity: 1;
-  transform: translateX(0);
-  filter: var(--blur-none);
+  transform: translateY(0);
+  filter: blur(0);
 }
 
-.panel.exiting {
-  opacity: 0;
-  transform: translateX(20px);
-  filter: var(--blur-enter);
-}
-
-/* ── Slider & toggle feedback (Emil — 150ms, precise) ──────────── */
-.slider::-webkit-slider-thumb {
-  transition:
-    box-shadow var(--motion-control) var(--ease-control),
-    transform var(--motion-control) var(--ease-control);
-}
-
-.slider:active::-webkit-slider-thumb {
-  transform: scale(1.2);
-  box-shadow: 0 0 0 4px rgba(0, 255, 136, 0.2);
-}
-
-.toggle {
-  transition:
-    background-color var(--motion-control) var(--ease-control),
-    box-shadow var(--motion-control) var(--ease-control);
-}
-
-.toggle-knob {
-  transition: transform var(--motion-control) var(--ease-control);
-}
-
-.toggle.active .toggle-knob {
-  transform: translateX(20px);
-}
-
-/* ── Stats display (Emil — instant, no animation) ──────────────── */
-.stat-value {
-  transition: none;
-}
-
-/* ── ASCII glow pulse (Jhey — 500ms bouncy) ────────────────────── */
-@keyframes glow-pulse {
-  0%, 100% {
-    text-shadow: 0 0 4px currentColor;
-  }
-  50% {
-    text-shadow: 0 0 12px currentColor, 0 0 24px currentColor;
-  }
-}
-
-.ascii-glow {
-  animation: glow-pulse var(--motion-effect) var(--spring-bouncy) infinite;
-}
-
-/* ── Drop ripple animation (Jhey — 1.5s bouncy) ───────────────── */
-@keyframes drop-ripple {
-  0% {
-    transform: scale(0);
-    opacity: 0.6;
-  }
-  60% {
-    transform: scale(1.2);
-    opacity: 0.2;
-  }
-  100% {
-    transform: scale(1.5);
-    opacity: 0;
-  }
-}
-
-.drop-ripple {
-  animation: drop-ripple var(--motion-ripple) var(--spring-bouncy) forwards;
-  pointer-events: none;
-  position: absolute;
-  border-radius: 50%;
-  border: 2px solid var(--accent);
-}
-
-/* ── Button press (Emil) ───────────────────────────────────────── */
-.btn {
-  transition:
-    background-color var(--motion-control) var(--ease-control),
-    transform var(--motion-control) var(--ease-control),
-    box-shadow var(--motion-control) var(--ease-control);
-}
-
-.btn:active {
-  transform: scale(0.97);
-}
-
-/* ── Fade in utility ───────────────────────────────────────────── */
 @keyframes fade-in {
   from {
     opacity: 0;
-    transform: translateY(8px);
-    filter: var(--blur-enter);
+    transform: translateY(16px);
+    filter: blur(10px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
-    filter: var(--blur-none);
+    filter: blur(0);
   }
 }
 
 .fade-in {
-  animation: fade-in var(--motion-modal) var(--spring-snappy) both;
+  animation: fade-in var(--motion-panel) var(--ease-snappy) both;
 }
 
-.fade-in-delay-1 { animation-delay: 50ms; }
-.fade-in-delay-2 { animation-delay: 100ms; }
-.fade-in-delay-3 { animation-delay: 150ms; }
+.fade-in-delay-1 {
+  animation-delay: 60ms;
+}
+
+.fade-in-delay-2 {
+  animation-delay: 120ms;
+}
+
+.fade-in-delay-3 {
+  animation-delay: 180ms;
+}
+
+@keyframes canvas-arrival {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes chip-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 rgba(244, 207, 110, 0);
+  }
+  50% {
+    box-shadow: 0 0 28px rgba(244, 207, 110, 0.18);
+  }
+}
+
+@keyframes drop-ripple {
+  0% {
+    transform: scale(0.2);
+    opacity: 0.76;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+@keyframes stripe-scan {
+  0%, 100% {
+    box-shadow: inset 0 0 0 rgba(255, 255, 255, 0);
+  }
+  50% {
+    box-shadow: inset 120px 0 0 rgba(255, 255, 255, 0.08);
+  }
+}
