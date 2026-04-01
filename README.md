@@ -19,6 +19,9 @@
 
 ## What is this?
 
+![Demo](demo.gif)
+
+
 `pixel-to-ascii` converts visual assets into ASCII art in real time. The core renderer is written in Zig, compiled to WebAssembly for the browser and to static libraries for native platforms (macOS, iOS). Drop an image or video file into the web app and watch it rendered as colored ASCII characters at 60+ FPS.
 
 ## Screenshots
